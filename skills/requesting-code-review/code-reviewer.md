@@ -1,12 +1,16 @@
 # Code Reviewer Prompt Template
 
-Use this template when dispatching a code reviewer subagent.
+Use this template only for a reviewer whose runtime, scope, and review pass
+were explicitly approved.
 
 **Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
 
 ```
 Subagent (general-purpose):
   description: "Review code changes"
+  model: [EXACT_MODEL_AND_PROVIDER — REQUIRED]
+  reasoning_effort: [REASONING_EFFORT — REQUIRED]
+  context_tier: [CONTEXT_TIER — REQUIRED]
   prompt: |
     You are a Senior Code Reviewer with expertise in software architecture,
     design patterns, and best practices. Your job is to review completed work
@@ -25,6 +29,8 @@ Subagent (general-purpose):
     **Base:** [BASE_SHA]
     **Head:** [HEAD_SHA]
 
+    Review exactly this fixed BASE..HEAD range. Do not broaden it.
+
     ```bash
     git diff --stat [BASE_SHA]..[HEAD_SHA]
     git diff [BASE_SHA]..[HEAD_SHA]
@@ -32,16 +38,22 @@ Subagent (general-purpose):
 
     ## Read-Only Review
 
-    Your review is read-only on this checkout. Do not mutate the working tree, the index, HEAD, or branch state in any way. Use tools like `git show`, `git diff`, and `git log` to inspect history. If you need a working copy of a different revision, check it out into a separate temporary directory (e.g. `git worktree add /tmp/review-[SHA] [SHA]`) — never move HEAD on this checkout.
+    Your review is read-only on this repository and checkout. Do not mutate
+    the working tree, index, HEAD, branch state, worktree metadata, or
+    repository metadata in any way. Inspect the supplied exact range with
+    read-only commands such as `git diff`, `git show`, and `git log`.
+
+    Do not create a worktree, checkout, branch, clone, temporary repository,
+    commit, stash, or index entry. If read-only inspection of the supplied
+    repository and exact range is insufficient, stop and tell the controller
+    what additional source or context is required. Do not create or change a
+    checkout to obtain it.
 
     ## You Do Not Dispatch Subagents
 
-    Do all of this review yourself. Never spawn a subagent to review part
-    of the diff, and never spawn another reviewer for a second opinion.
-    This process already provides every review seat the work gets; a
-    reviewer you spawn duplicates one of them at full cost, and its
-    verdict counts for nothing. If the diff feels too large for one
-    pass, review it in passes yourself and say so in your report.
+    Do not invoke `task`, `create_session`, `run_factory`, background agents,
+    or any other nested delegation. Do not create helper agents, reviewers,
+    sessions, factories, or swarms. Perform this review yourself.
 
     ## What to Check
 
@@ -139,6 +151,14 @@ Subagent (general-purpose):
 - `[PLAN_OR_REQUIREMENTS]` — what it should do (plan file path, task text, or requirements)
 - `[BASE_SHA]` — starting commit
 - `[HEAD_SHA]` — ending commit
+- `[EXACT_MODEL_AND_PROVIDER]` — explicitly approved provider and exact model identifier
+- `[REASONING_EFFORT]` — explicitly approved reasoning effort
+- `[CONTEXT_TIER]` — explicitly approved context tier
+
+The controller must apply all three through harness-native dispatch or resume
+fields. Prompt text alone is not runtime configuration. If the harness cannot
+explicitly apply one of them, stop for revised approval rather than omitting,
+inheriting, defaulting, or auto-routing it.
 
 **Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
 

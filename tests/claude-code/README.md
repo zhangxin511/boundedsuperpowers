@@ -82,38 +82,60 @@ echo "=== All tests passed ==="
 
 ### Fast Tests (run by default)
 
+#### test-bounded-delegation-contract.sh
+Statically verifies the bounded phase/pair contract across the core delegation
+skills, prompt templates, and user documentation.
+
+#### test-bounded-authoring-contract.sh
+Statically verifies approval disclosure, exact runtime settings, finite
+activation budgets, persistent skill-test and document-review roles,
+non-overlapping parallel writers, and no nested delegation across the authoring
+and general parallel-delegation skills.
+
+#### test-bounded-runtime-cleanup.sh
+Statically verifies milestone-oriented SDD compatibility surfaces, bounded
+harness-porting requirements, safe adapter fallbacks, updated explicit-skill
+fixtures, direct review/verification behavior, and superseded historical SDD
+documents.
+
 #### test-subagent-driven-development.sh
 Tests skill content and requirements (~2 minutes):
 - Skill loading and accessibility
-- Workflow ordering (spec compliance before code quality)
+- Persistent implementer/reviewer pair
 - Self-review requirements documented
-- Plan reading efficiency documented
+- Bounded phase size documented
 - Spec compliance reviewer skepticism documented
-- Review loops documented
-- Task context provision documented
+- Three-pass review cap documented
+- Nested delegation prohibition documented
+- Phase stop boundary documented
 
 ### Integration Tests (use --integration flag)
 
 #### test-subagent-driven-development-integration.sh
 Full workflow execution test (~10-30 minutes):
 - Creates real test project with Node.js setup
-- Creates implementation plan with 2 tasks
-- Executes plan using subagent-driven-development
+- Creates implementation plan with 2 milestones
+- Supplies a complete two-milestone bounded-phase approval fixture
+- Executes the plan using subagent-driven-development
 - Verifies actual behaviors:
-  - Plan read once at start (not per task)
-  - Full task text provided in subagent prompts
-  - Subagents perform self-review before reporting
-  - Spec compliance review happens before code quality
-  - Spec reviewer reads code independently
+  - Skill invocation is present in the transcript
+  - At least two Agent/Task tool calls occur
+  - Task-tracking tools are used
   - Working implementation is produced
   - Tests pass
-  - Proper git commits created
+  - Milestone commits are created
+  - No unrequested arithmetic exports are added
+  - Token telemetry can analyze the transcript
 
 **What it tests:**
-- The workflow actually works end-to-end
-- Our improvements are actually applied
-- Subagents follow the skill correctly
-- Final code is functional and tested
+- Observable implementation outcomes from one end-to-end run
+- Final code is functional, scoped, committed, and tested
+
+The transcript format does not currently provide reliable assertions for child
+identity/reuse, non-overlap, reviewer filesystem behavior, fix routing,
+review-pass caps, or the phase stop boundary. Those contracts are covered by
+`test-bounded-delegation-contract.sh`; this integration test does not claim to
+verify them dynamically.
 
 #### test-worktree-native-preference.sh
 RED-GREEN-REFACTOR validation for the using-git-worktrees skill (~5 minutes):

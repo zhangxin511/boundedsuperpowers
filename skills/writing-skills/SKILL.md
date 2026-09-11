@@ -11,7 +11,10 @@ description: Use when creating new skills, editing existing skills, or verifying
 
 **Personal skills live in your runtime's skills directory** (`~/.claude/skills/` on Claude Code) — see [codex-tools.md](../using-superpowers/references/codex-tools.md) or [gemini-tools.md](../using-superpowers/references/gemini-tools.md) for the path on those runtimes. Codex, Copilot CLI, and Gemini CLI all also recognize `~/.agents/skills/` as a cross-runtime alias.
 
-You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
+You write test cases, watch them fail (baseline behavior), write the skill
+(documentation), watch tests pass, and refactor (close loopholes). Static tests apply only to mechanically observable properties. Behavioral and discipline
+claims require pressure-scenario evidence. Delegated skill testing requires an
+explicitly approved bounded test topology.
 
 **Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
 
@@ -31,10 +34,10 @@ A **skill** is a reference guide for proven techniques, patterns, or tools. Skil
 
 | TDD Concept | Skill Creation |
 |-------------|----------------|
-| **Test case** | Pressure scenario with subagent |
+| **Test case** | Pressure scenario for behavior; deterministic contract only for mechanical properties |
 | **Production code** | Skill document (SKILL.md) |
-| **Test fails (RED)** | Agent violates rule without skill (baseline) |
-| **Test passes (GREEN)** | Agent complies with skill present |
+| **Test fails (RED)** | Baseline failure is observed before the change |
+| **Test passes (GREEN)** | The same test demonstrates the required result after the change |
 | **Refactor** | Close loopholes while maintaining compliance |
 | **Write test first** | Run baseline scenario BEFORE writing skill |
 | **Watch it fail** | Document exact rationalizations agent uses |
@@ -233,11 +236,11 @@ search-conversations supports multiple modes and filters. Run --help for details
 **Use cross-references:**
 ```markdown
 # ❌ BAD: Repeat workflow details
-When searching, dispatch subagent with template...
+When searching, follow this duplicated multi-step workflow...
 [20 lines of repeated instructions]
 
 # ✅ GOOD: Reference other skill
-Always use subagents (50-100x context savings). REQUIRED: Use [other-skill-name] for workflow.
+**REQUIRED SUB-SKILL:** Use [other-skill-name] for this workflow.
 ```
 
 **Compress examples:**
@@ -245,12 +248,12 @@ Always use subagents (50-100x context savings). REQUIRED: Use [other-skill-name]
 # ❌ BAD: Verbose example (42 words)
 your human partner: "How did we handle authentication errors in React Router before?"
 You: I'll search past conversations for React Router authentication patterns.
-[Dispatch subagent with search query: "React Router authentication error handling 401"]
+[Long explanation of every search step]
 
 # ✅ GOOD: Minimal example (20 words)
 Partner: "How did we handle auth errors in React Router?"
 You: Searching...
-[Dispatch subagent → synthesis]
+[Search → synthesis]
 ```
 
 **Eliminate redundancy:**
@@ -555,34 +558,79 @@ Follow the TDD cycle:
 
 ### RED: Write Failing Test (Baseline)
 
-Run pressure scenario with subagent WITHOUT the skill. Document exact behavior:
+Classify the claim before choosing the test:
+
+- **Mechanical claim:** frontmatter, required output shape, file layout, exact
+  strings, forbidden topology text, or another property fully observable
+  without model behavior. A deterministic/static contract may test it.
+- **Behavioral or discipline claim:** whether an agent chooses, refuses,
+  follows, or resists something under pressure. Run a pressure scenario in RED
+  and GREEN, either directly in the current session when appropriate or through
+  the already approved persistent test executor.
+
+For behavioral RED, run the pressure scenario without the skill or before the
+change and demonstrate the baseline failure or undesired behavior. Document:
 - What choices did they make?
 - What rationalizations did they use (verbatim)?
 - Which pressures triggered violations?
 
-This is "watch the test fail" - you must see what agents naturally do before writing the skill.
+Static grep or structure checks cannot substitute for behavioral RED. For
+delegated behavioral testing, first disclose and obtain approval for the
+bounded test topology described below.
 
 ### GREEN: Write Minimal Skill
 
 Write skill that addresses those specific rationalizations. Don't add extra content for hypothetical cases.
 
-Run same scenarios WITH skill. Agent should now comply.
+For behavioral GREEN, run the same pressure scenario after the skill change and
+demonstrate compliance under the same pressure. Use the same approved
+persistent test executor when delegation is active. A static contract may
+supplement this evidence, but cannot establish model compliance.
 
 ### REFACTOR: Close Loopholes
 
-Agent found new rationalization? Add explicit counter. Re-test until bulletproof.
+If a test or approved evaluator finds a new rationalization, add an explicit
+counter and re-test within the finite approved budget. Stop after the third
+evaluation/review pass and report unresolved Critical/Important findings.
 
-### Micro-Test Wording Before Full Scenarios
+### Bounded Delegated Testing
 
-Full pressure-scenario runs are the final gate, but they are slow and expensive per iteration. Verify the wording itself first with micro-tests:
+Before creating any child, disclose one bounded test topology and wait for
+explicit approval:
 
-1. **One fresh-context sample per call** — a raw API call, or a single-shot subagent if you don't have API access. System prompt = the realistic context the guidance will live in (the full skill or prompt template, not the guidance in isolation); user message = a task that tempts the failure.
-2. **Always include a no-guidance control.** If the control doesn't exhibit the failure, there is nothing to fix — stop, don't author the guidance.
-3. **5+ reps per variant.** Single samples lie.
-4. **Manually read every flagged match.** Score programmatically if you like, but template echoes and quoted counter-examples masquerade as hits; automated counts alone overstate both failure and success.
-5. **Variance is a metric.** When guidance lands, reps converge on the same shape. Five different interpretations across five reps means the wording isn't binding — tighten the form before adding words.
+| Field | Required detail |
+| --- | --- |
+| Test milestone | Exact skill behavior and scenarios |
+| Test executor | Agent/role, exact model and provider, reasoning effort, context tier |
+| Evaluator | Optional persistent independent read-only evaluator/reviewer with the same runtime fields |
+| Scope | Skill, fixtures, prompts, and safe artifact paths |
+| Validation | RED/GREEN evidence and pass/fail criteria |
+| Bounds | Finite activation budget and at most three total evaluation/review passes |
+| Stop boundary | Stop after the approved test milestone |
 
-Micro-tests verify wording; they do not replace pressure scenarios for discipline skills.
+Reuse one persistent test executor for baseline, revised scenarios, blockers,
+and fixes. The same test executor performs revisions. Only when independently
+useful, reuse one persistent read-only evaluator/reviewer. At most one child is
+active at a time. The same evaluator performs at most three total
+evaluation/review passes; passes 2 and 3 require unresolved Critical/Important
+findings or an explicit test failure.
+
+Children must not delegate, create agents or sessions, run factories, or start
+background work. Every child activation or resume counts, including
+initialization, scenario execution, BLOCKED, status, or no-op turns,
+blocker-resolution turns, retries, revisions or fixes, evaluation or review,
+and any optional summary activation. Stop for reapproval before exhaustion of
+the activation budget.
+
+Never use fresh-agent swarms, implicit or automatic provider/model selection,
+"most capable available model," Rubber Duck, review swarms, or an automatic
+final reviewer. If the harness cannot explicitly apply an approved runtime
+field or preserve the persistent identity, test directly or stop for revised
+approval.
+
+Verbose transcripts belong in safe non-repository session artifact paths unless
+a tracked fixture was explicitly approved. A read-only evaluator must not
+mutate repository or worktree state.
 
 **Testing methodology:** See [testing-skills-with-subagents.md](testing-skills-with-subagents.md) for the complete testing methodology:
 - How to write pressure scenarios
@@ -626,11 +674,15 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 
 ## Skill Creation Checklist (TDD Adapted)
 
-**IMPORTANT: Create a todo for EACH checklist item below.**
+**IMPORTANT: Create a todo for EACH applicable checklist item below. A
+delegated item may be N/A when testing is direct. Static testing may replace
+only mechanically observable checks, never behavioral pressure testing.**
 
 **RED Phase - Write Failing Test:**
 - [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
-- [ ] Run scenarios WITHOUT skill - document baseline behavior verbatim
+- [ ] Classify each claim as mechanical or behavioral
+- [ ] For mechanical claims, run deterministic contracts WITHOUT the change
+- [ ] For behavioral/discipline claims, run the pressure scenario in RED and demonstrate baseline failure
 - [ ] Identify patterns in rationalizations/failures
 
 **GREEN Phase - Write Minimal Skill:**
@@ -642,17 +694,21 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 - [ ] Clear overview with core principle
 - [ ] Address specific baseline failures identified in RED
 - [ ] Guidance form matches the failure type (see Match the Form to the Failure)
-- [ ] For behavior-shaping guidance: wording micro-tested against a no-guidance control (5+ reps, every flagged match read manually) — N/A for pure reference skills
+- [ ] For delegated behavior tests: bounded test topology disclosed and approved
+- [ ] Exact model/provider, reasoning effort, context tier, scope, and activation budget recorded
+- [ ] One persistent test executor reused; optional evaluator is persistent and read-only
 - [ ] Code inline OR link to separate file
 - [ ] One excellent example (not multi-language)
-- [ ] Run scenarios WITH skill - verify agents now comply
+- [ ] For mechanical claims, run the same deterministic contracts WITH the skill
+- [ ] For behavioral/discipline claims, run the same pressure scenario in GREEN and demonstrate compliance
+- [ ] Do not claim model compliance from static text or structure assertions
 
 **REFACTOR Phase - Close Loopholes:**
 - [ ] Identify NEW rationalizations from testing
 - [ ] Add explicit counters (if discipline skill)
 - [ ] Build rationalization table from all test iterations
 - [ ] Create red flags list
-- [ ] Re-test until bulletproof
+- [ ] Re-test within the approved budget; stop after evaluation/review pass 3
 
 **Quality Checks:**
 - [ ] Small flowchart only if decision non-obvious
@@ -662,8 +718,8 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 - [ ] Supporting files only for tools or heavy reference
 
 **Deployment:**
-- [ ] Commit skill to git and push to your fork (if configured)
-- [ ] Consider contributing back via PR (if broadly useful)
+- [ ] Commit skill when the requested action mode allows it
+- [ ] Push or open a PR only when separately requested and approved
 
 ## Discovery Workflow
 
