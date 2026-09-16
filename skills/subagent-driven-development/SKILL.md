@@ -32,6 +32,9 @@ persistent independent reviewer, sequential dispatches, then stop.
 - Do not automatically invoke Rubber Duck, adversarial review, review swarms,
   extra reviewers, or a final whole-branch reviewer. Additional review requires
   a new disclosed approval.
+- At phase completion, retire the implementer and reviewer child identities.
+  Never resume or reuse either identity in a later phase.
+- A later phase requires a newly disclosed, newly approved, and newly created implementer/reviewer pair.
 - Stop after the approved phase. Do not continue to another phase, push, create
   a pull request, merge, or deploy.
 
@@ -68,6 +71,11 @@ When the parent is GPT-5.6 Sol, propose explicit `gpt-5.6-sol` for both
 children. Max reasoning, long context, a provider change, or a different model
 requires exact prior approval. If an approved child becomes unavailable, stop
 and request approval for the replacement instead of silently rerouting.
+
+Every model, provider, reasoning-effort, or context-tier runtime exception is scoped to the exact approved phase.
+A later phase must return to the default model configuration.
+A later phase proposal may include an exception only when it prominently identifies the exact exception and the user explicitly approves it again.
+Do not silently inherit or carry forward any runtime configuration from a prior phase.
 
 ## Setup
 
@@ -213,8 +221,9 @@ After the last approved milestone:
 
 1. Confirm every milestone commit and validation result.
 2. Summarize deferred Minor findings and any decisions.
-3. Report the phase as complete.
-4. Stop.
+3. Retire both phase-scoped child identities.
+4. Report the phase as complete.
+5. Stop.
 
 Do not automatically run a final whole-branch review. Do not invoke
 `superpowers:finishing-a-development-branch` unless the human partner
