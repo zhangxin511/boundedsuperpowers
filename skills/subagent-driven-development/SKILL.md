@@ -72,6 +72,11 @@ children. Max reasoning, long context, a provider change, or a different model
 requires exact prior approval. If an approved child becomes unavailable, stop
 and request approval for the replacement instead of silently rerouting.
 
+Every model, provider, reasoning-effort, or context-tier runtime exception is scoped to the exact approved phase.
+A later phase must return to the default model configuration.
+A later phase proposal may include an exception only when it prominently identifies the exact exception and the user explicitly approves it again.
+Do not silently inherit or carry forward any runtime configuration from a prior phase.
+
 ## Setup
 
 1. Verify or create an isolated worktree with

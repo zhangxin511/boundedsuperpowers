@@ -72,6 +72,14 @@ assert_has "$SDD" 'model.*provider.*reasoning effort.*context tier' \
     "approval disclosure includes exact runtime choices"
 assert_has "$SDD" 'gpt-5\.6-sol' \
     "default GPT-5.6 Sol child model is explicit"
+assert_has "$SDD" 'runtime.*exception.*exact approved phase' \
+    "runtime exceptions are scoped to one exact phase"
+assert_has "$SDD" 'later phase.*return.*default model configuration' \
+    "later phases return to the default model configuration"
+assert_has "$SDD" 'later phase proposal.*prominently identif.*exact exception.*explicitly approves.*again' \
+    "later exceptions require prominent renewed approval"
+assert_has "$SDD" 'do not silently inherit or carry forward.*prior phase' \
+    "prior runtime exceptions cannot carry forward silently"
 
 assert_lacks "$SDD" 'fresh (implementer )?subagent per task|broad (final|whole-branch) review|dispatch.*most capable available model|Rounds 4-5' \
     "unbounded topology language is removed"
