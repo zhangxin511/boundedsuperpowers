@@ -32,6 +32,9 @@ persistent independent reviewer, sequential dispatches, then stop.
 - Do not automatically invoke Rubber Duck, adversarial review, review swarms,
   extra reviewers, or a final whole-branch reviewer. Additional review requires
   a new disclosed approval.
+- At phase completion, retire the implementer and reviewer child identities.
+  Never resume or reuse either identity in a later phase.
+- A later phase requires a newly disclosed, newly approved, and newly created implementer/reviewer pair.
 - Stop after the approved phase. Do not continue to another phase, push, create
   a pull request, merge, or deploy.
 
@@ -213,8 +216,9 @@ After the last approved milestone:
 
 1. Confirm every milestone commit and validation result.
 2. Summarize deferred Minor findings and any decisions.
-3. Report the phase as complete.
-4. Stop.
+3. Retire both phase-scoped child identities.
+4. Report the phase as complete.
+5. Stop.
 
 Do not automatically run a final whole-branch review. Do not invoke
 `superpowers:finishing-a-development-branch` unless the human partner

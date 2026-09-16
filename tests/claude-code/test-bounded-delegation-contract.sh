@@ -64,6 +64,10 @@ assert_has "$SDD" 'at most three total review passes' \
     "review passes are capped at three"
 assert_has "$SDD" 'stop after.*approved phase' \
     "execution stops at the phase boundary"
+assert_has "$SDD" 'retire.*implementer.*reviewer|implementer.*reviewer.*retire' \
+    "phase completion retires both child identities"
+assert_has "$SDD" 'later phase.*newly disclosed.*newly approved.*newly created.*pair' \
+    "each later phase requires a newly approved pair"
 assert_has "$SDD" 'model.*provider.*reasoning effort.*context tier' \
     "approval disclosure includes exact runtime choices"
 assert_has "$SDD" 'gpt-5\.6-sol' \
