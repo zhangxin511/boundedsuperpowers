@@ -142,7 +142,7 @@ I approve this exact bounded delegation proposal:
 - Scope: package.json, src/math.js, test/math.test.js, and git commits in this temporary repository
 - Validation: npm test; all six specified arithmetic cases pass; no divide, power, or subtract export
 - Topology: create both children idle; activate only one at a time; reuse the same implementer and reviewer
-- Limits: maximum 17 child activations for this two-milestone phase; at most three review passes per milestone
+- Limits: base allowance 17 child activations through Pass 3; conditional reserve up to 12 unlocks only after Pass 3 is CONVERGING; absolute maximum 29; at most six review passes per milestone
 - Stop boundary: stop after Arithmetic core; do not continue, push, create a PR, merge, or deploy
 
 Execute docs/superpowers/plans/implementation-plan.md using the
@@ -161,7 +161,7 @@ PROMPT="I approve this exact bounded delegation proposal:
 - Scope: package.json, src/math.js, test/math.test.js, and git commits in this temporary repository
 - Validation: npm test; all six specified arithmetic cases pass; no divide, power, or subtract export
 - Topology: create both children idle; activate only one at a time; reuse the same implementer and reviewer
-- Limits: maximum 17 child activations for this two-milestone phase; at most three review passes per milestone
+- Limits: base allowance 17 child activations through Pass 3; conditional reserve up to 12 unlocks only after Pass 3 is CONVERGING; absolute maximum 29; at most six review passes per milestone
 - Stop boundary: stop after Arithmetic core; do not continue, push, create a PR, merge, or deploy
 
 Execute docs/superpowers/plans/implementation-plan.md using the
