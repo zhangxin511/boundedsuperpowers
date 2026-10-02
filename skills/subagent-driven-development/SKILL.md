@@ -23,10 +23,16 @@ persistent independent reviewer, sequential dispatches, then stop.
 - The implementer is the only child allowed to edit code.
 - Critical and Important findings return to the same implementer. Never create
   a fixer child.
-- The same reviewer performs at most three total review passes per milestone.
-  Passes 2 and 3 happen only while Critical or Important findings remain.
-- After pass 3, stop and escalate unresolved Critical or Important findings to
-  your human partner.
+- The same reviewer performs at most six total review passes per milestone.
+  Pass 1 is the initial review. Every later pass uses the same implementer to
+  fix findings, then the same reviewer to re-review the full fixed
+  `BASE_SHA..HEAD_SHA` range.
+- Passes 2 and 3 happen only while Critical or Important findings remain.
+  Passes 4-6 unlock only when Pass 3 is CONVERGING, and each later pass must
+  remain CONVERGING.
+- The first NOT_CONVERGING classification stops the loop and escalates to your
+  human partner. After Pass 6, any remaining Critical or Important finding stops and escalates.
+  There is no automatic Pass 7 and no replacement reviewer.
 - Children must not invoke `task`, `create_session`, `run_factory`, background
   agents, or any other nested delegation.
 - Do not automatically invoke Rubber Duck, adversarial review, review swarms,
@@ -49,7 +55,7 @@ Before creating either child, disclose one proposal containing:
 | Reviewer | Agent type, exact model/provider, reasoning effort, context tier |
 | Scope | Files/components each milestone may change |
 | Validation | Focused commands and milestone acceptance criteria |
-| Bounds | Two idle child creations, sequential activations, maximum `8 × milestones + 1` child activations for the phase, and three review passes per milestone |
+| Bounds | Two idle child creations, sequential activations, a base allowance of `8 × milestones + 1` child activations through Pass 3, a conditional reserve of at most `6 × milestones` after Pass 3 is CONVERGING, an absolute maximum of `14 × milestones + 1`, and at most six review passes per milestone |
 | Stop boundary | Stop after this phase; no next phase, push, PR, merge, or deploy |
 
 Wait for exact approval of that proposal. Approval covers only the disclosed
@@ -95,12 +101,19 @@ Do not silently inherit or carry forward any runtime configuration from a prior 
    sending the reviewer prompt together with review pass 1. Never initialize
    both roles concurrently.
 
-For a phase with `M` milestones, the default disclosed maximum is `8 × M + 1`
-child activations:
+For a phase with `M` milestones, the base allowance is `8 × M + 1` child
+activations through Pass 3:
 
 - per milestone: one implementation activation, up to two blocker-resolution
   activations, up to two fix activations, and up to three review activations;
 - per phase: one optional implementer phase-complete summary activation.
+
+When Pass 3 is CONVERGING, a conditional reserve of at most `6 × M`
+activations unlocks for Passes 4-6. This reserve covers at most one fix and one
+review activation for each additional pass per milestone. It does not unlock
+for a milestone classified NOT_CONVERGING. The absolute disclosed maximum is `14 × M + 1`;
+unused reserve from one milestone does not authorize work outside
+the approved phase or beyond Pass 6.
 
 Every child activation or resume counts against this total, including first-use
 initialization, milestone work, a turn that returns BLOCKED, blocker resolution,
@@ -173,10 +186,14 @@ The reviewer returns:
 - spec-compliance verdict;
 - strengths;
 - Critical, Important, and Minor findings with file:line evidence;
+- stable IDs for every Critical and Important finding, with status `resolved`,
+  `downgraded`, `unchanged`, `reopened`, or `new` relative to the preceding
+  pass;
 - milestone quality verdict.
 
-Minor findings do not trigger another pass unless the acceptance criteria make
-them blocking.
+Minor findings never drive another repair or re-review pass unless the
+acceptance criteria explicitly make one blocking. Summarize and defer all
+other Minor findings.
 
 ### 3. Fix and re-review
 
@@ -188,8 +205,27 @@ If Critical or Important findings remain:
 4. Resume the same reviewer with the original `BASE_SHA`, the new `HEAD_SHA`,
    prior findings, and the exact fixed `BASE_SHA..HEAD_SHA` range.
 
-The reviewer re-evaluates the full milestone range against the acceptance
-criteria so fixes cannot hide regressions elsewhere in the milestone.
+The reviewer re-evaluates the full fixed `BASE_SHA..HEAD_SHA` milestone range
+against the acceptance criteria so fixes cannot hide regressions elsewhere in
+the milestone. It preserves each blocking finding's stable ID across passes;
+a finding first observed on a later pass receives a new stable ID and status
+`new`.
+
+For Pass 3 and every allowed later pass, compare the current pass with the
+immediately preceding pass. Compute aggregate blocking severity from all
+currently active Critical and Important findings: Critical = 2 points,
+Important = 1 point, and resolved or downgraded-to-Minor findings = 0 points.
+A downgrade from Critical to Important therefore reduces the aggregate by one.
+Classify the pass CONVERGING only when all of these are true:
+
+1. At least one blocking finding is `resolved` or `downgraded` from the preceding pass.
+2. No blocking finding is `reopened`.
+3. No new Critical finding appears.
+4. Aggregate Critical/Important severity decreases relative to the preceding
+   pass.
+
+Otherwise classify the pass NOT_CONVERGING, stop immediately, and escalate to
+the human partner.
 
 Review pass limits:
 
@@ -197,11 +233,13 @@ Review pass limits:
 | --- | --- | --- |
 | 1 | Always | Initial milestone review |
 | 2 | Unresolved Critical/Important findings after pass 1 | Same reviewer |
-| 3 | Unresolved Critical/Important findings after pass 2 | Same reviewer |
-| After 3 | Findings still unresolved | Stop and escalate; no fourth pass or new reviewer |
+| 3 | Unresolved Critical/Important findings after pass 2 | Same reviewer classifies CONVERGING or NOT_CONVERGING |
+| 4-6 | Findings remain and every preceding pass from Pass 3 onward is CONVERGING | Same pair; apply the same convergence rule after each pass |
+| After 6 | Critical/Important findings remain | Stop and escalate; no automatic Pass 7 or replacement reviewer |
 
 Never fix findings in the controller session and never create a separate
 fixer. The same implementer owns the milestone until it passes or escalates.
+For Passes 4-6, the first non-converging pass stops immediately and escalates.
 
 ### 4. Complete the milestone
 
@@ -252,7 +290,9 @@ not write review artifacts into the repository or worktree.
 - Letting the reviewer edit or commit
 - Creating a fixer for review findings
 - Starting review pass 2 or 3 without unresolved Critical/Important findings
-- Starting review pass 4
+- Starting review pass 4 before Pass 3 is CONVERGING
+- Continuing after a non-converging pass
+- Starting review pass 7 or replacing the reviewer
 - Selecting a model through inheritance, automatic routing, or "most capable"
 - Adding an undisclosed reviewer or review swarm
 - Continuing into the next phase after completion
@@ -268,7 +308,7 @@ Any of these means stop and restore the approved bounded topology.
 | "Fresh agents avoid context pollution." | The approved phase deliberately preserves context in one implementer and one reviewer. |
 | "Parallel work is faster." | Shared phase state and review ordering require at most one active delegated agent. |
 | "A specialist fixer will converge faster." | A third editor breaks ownership and the approved topology; return findings to the same implementer. |
-| "One more review pass cannot hurt." | Three passes is the disclosed cap. Escalate after pass 3. |
+| "One more review pass cannot hurt." | Passes 4-6 require measured convergence and the conditional reserve. Pass 7 is never automatic. |
 | "A blocked turn did no work, so it should not count." | Every activation consumes budget and can retain resources or trigger more work. |
 | "The parent model is inherited automatically." | Automatic routing is not disclosed approval. Specify the exact model. |
 | "A final reviewer is extra assurance." | It is an extra agent and dispatch outside the approved topology. Obtain new approval first. |

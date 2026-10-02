@@ -60,8 +60,50 @@ assert_has "$SDD" 'at most one delegated agent.*active' \
     "delegated work is sequential"
 assert_has "$SDD" 'same implementer' \
     "findings return to the same implementer"
-assert_has "$SDD" 'at most three total review passes' \
-    "review passes are capped at three"
+assert_has "$SDD" 'at most six total review passes' \
+    "review passes are capped at six"
+assert_has "$SDD" 'Pass 1.*initial review|initial review.*Pass 1' \
+    "pass 1 is the initial review"
+assert_has "$SDD" 'later pass.*same implementer' \
+    "later passes reuse the same implementer"
+assert_has "$SDD" 'then the same reviewer' \
+    "later passes reuse the same reviewer"
+assert_has "$SDD" 'full fixed.*BASE_SHA\.\.HEAD_SHA|full.*fixed.*BASE_SHA\.\.HEAD_SHA' \
+    "later reviews cover the full fixed range"
+assert_has "$SDD" 'stable ID' \
+    "blocking findings have stable IDs"
+for finding_status in 'resolved' 'downgraded' 'unchanged' 'reopened' 'new'; do
+    assert_has "$SDD" "$finding_status" \
+        "blocking findings support $finding_status status"
+done
+assert_has "$SDD" 'Critical = 2 points' \
+    "aggregate blocking severity weights Critical findings"
+assert_has "$SDD" 'Important = 1 point' \
+    "aggregate blocking severity weights Important findings"
+assert_has "$SDD" 'Pass 3.*CONVERGING|CONVERGING.*Pass 3' \
+    "pass 3 classifies convergence"
+assert_has "$SDD" 'at least one.*(resolved|downgraded).*preceding pass' \
+    "convergence requires blocking progress"
+assert_has "$SDD" 'no blocking finding.*reopened' \
+    "convergence rejects reopened blocking findings"
+assert_has "$SDD" 'no new Critical finding' \
+    "convergence rejects new Critical findings"
+assert_has "$SDD" 'aggregate.*severity.*decreas' \
+    "convergence requires aggregate severity decrease"
+assert_has "$SDD" 'NOT_CONVERGING.*stop.*escalate|stop.*escalate.*NOT_CONVERGING' \
+    "non-convergence stops and escalates"
+assert_has "$SDD" 'Passes 4-6|Pass 4.*Pass 6' \
+    "convergence unlocks passes 4 through 6"
+assert_has "$SDD" 'first non-converging pass.*stop|stop.*first non-converging pass' \
+    "later non-convergence stops immediately"
+assert_has "$SDD" 'After Pass 6.*remaining Critical or Important.*stop.*escalate|Pass 6.*stop.*escalate.*Critical or Important' \
+    "blocking findings after pass 6 escalate"
+assert_has "$SDD" 'no automatic Pass 7|never.*Pass 7' \
+    "there is no automatic pass 7"
+assert_has "$SDD" 'no replacement reviewer|never.*replacement reviewer' \
+    "there is no replacement reviewer"
+assert_has "$SDD" 'Minor findings.*never drive.*repair.*re-review|Minor findings.*do not trigger another pass' \
+    "minor findings do not drive another pass"
 assert_has "$SDD" 'stop after.*approved phase' \
     "execution stops at the phase boundary"
 assert_has "$SDD" 'retire.*implementer.*reviewer|implementer.*reviewer.*retire' \
@@ -81,7 +123,7 @@ assert_has "$SDD" 'later phase proposal.*prominently identif.*exact exception.*e
 assert_has "$SDD" 'do not silently inherit or carry forward.*prior phase' \
     "prior runtime exceptions cannot carry forward silently"
 
-assert_lacks "$SDD" 'fresh (implementer )?subagent per task|broad (final|whole-branch) review|dispatch.*most capable available model|Rounds 4-5' \
+assert_lacks "$SDD" 'fresh (implementer )?subagent per task|broad (final|whole-branch) review|dispatch.*most capable available model' \
     "unbounded topology language is removed"
 
 for prompt in "$IMPLEMENTER" "$REVIEWER" "$RE_REVIEWER"; do
@@ -115,8 +157,14 @@ assert_has "$SDD" 'every child activation.*counts|every activation.*counts' \
     "every child activation consumes the budget"
 assert_has "$SDD" 'BLOCKED.*counts|blocked.*consumes' \
     "blocked turns consume the activation budget"
-assert_has "$SDD" '8 × M \+ 1' \
-    "phase activation budget has a finite formula"
+assert_has "$SDD" 'base allowance.*8 × M \+ 1|8 × M \+ 1.*base allowance' \
+    "phase activation budget has a finite base formula"
+assert_has "$SDD" 'conditional reserve.*6 × M|6 × M.*conditional reserve' \
+    "phase activation budget has a finite conditional reserve"
+assert_has "$SDD" 'When Pass 3 is CONVERGING, a conditional reserve' \
+    "conditional reserve unlocks only after pass 3 converges"
+assert_has "$SDD" 'absolute.*14 × M \+ 1|14 × M \+ 1.*absolute' \
+    "phase activation budget has an absolute maximum"
 assert_has "$SDD" 'up to two blocker-resolution' \
     "blocker allowance is finite"
 assert_has "$SDD" 'stop.*reapproval.*exceed|before exceeding.*reapproval' \
