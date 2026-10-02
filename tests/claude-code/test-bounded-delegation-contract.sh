@@ -137,6 +137,36 @@ assert_has "$REVIEWER" 'exact.*BASE\.\.HEAD|fixed.*BASE\.\.HEAD' \
     "reviewer receives a fixed review range"
 assert_has "$REVIEWER" 'read-only' \
     "reviewer remains read-only"
+assert_has "$REVIEWER" 'at most six total review passes' \
+    "reviewer prompt caps review at six passes"
+assert_has "$REVIEWER" 'Passes 4-6 unlock only when Pass 3 is CONVERGING' \
+    "reviewer prompt gates extended passes on convergence"
+assert_has "$REVIEWER" 'stable ID' \
+    "reviewer prompt requires stable blocking finding IDs"
+for finding_status in 'resolved' 'downgraded' 'unchanged' 'reopened' 'new'; do
+    assert_has "$REVIEWER" "$finding_status" \
+        "reviewer prompt supports $finding_status status"
+    assert_has "$RE_REVIEWER" "$finding_status" \
+        "re-review prompt supports $finding_status status"
+done
+assert_has "$REVIEWER" 'CONVERGING.*NOT_CONVERGING' \
+    "reviewer prompt reports convergence classification"
+assert_has "$RE_REVIEWER" 'pass \[2_TO_6\]' \
+    "re-review prompt supports passes 2 through 6"
+assert_has "$RE_REVIEWER" 'Passes 4-6 are valid only when Pass 3.*CONVERGING' \
+    "re-review prompt enforces the pass-3 convergence gate"
+assert_has "$RE_REVIEWER" 'aggregate.*severity' \
+    "re-review prompt reports aggregate severity evidence"
+assert_has "$RE_REVIEWER" 'first non-converging pass.*stop|NOT_CONVERGING.*stop' \
+    "re-review prompt stops on non-convergence"
+assert_has "$RE_REVIEWER" 'no automatic Pass 7|never.*Pass 7' \
+    "re-review prompt prohibits pass 7"
+assert_has "$RE_REVIEWER" 'Minor.*do not.*another pass|Minor.*never.*another pass' \
+    "re-review prompt defers minor-only findings"
+assert_lacks "$REVIEWER" 'at most three total review passes|fourth pass' \
+    "reviewer prompt removes fixed-three-pass escalation"
+assert_lacks "$RE_REVIEWER" 'at most three total|pass 3 leaves any.*must stop' \
+    "re-review prompt removes unconditional pass-3 escalation"
 assert_has "$REVIEWER" 'return the complete review in (this|your) response' \
     "reviewer returns its complete review without writing artifacts"
 assert_lacks "$REVIEWER" 'REVIEW_REPORT_PATH|write.*review.*file|put.*analysis.*file' \
@@ -210,8 +240,11 @@ assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integr
     'medium reasoning, default context' \
     "integration fixture names approved effort and context"
 assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integration.sh" \
-    'maximum 17 child activations' \
-    "integration fixture states the finite phase budget"
+    'base allowance 17.*conditional reserve.*12.*absolute maximum 29' \
+    "integration fixture states the two-tier phase budget"
+assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integration.sh" \
+    'at most six review passes' \
+    "integration fixture states the convergence-gated pass cap"
 assert_lacks "$REPO_ROOT/tests/claude-code/README.md" \
     'persistent implementer and reviewer are reused|Delegated work is sequential|Reviewer stays read-only|Findings return to the same implementer|stops at the approved phase boundary' \
     "test documentation does not overclaim unasserted runtime properties"

@@ -28,8 +28,10 @@ Milestones:
 [MILESTONE_LIST]
 
 Maximum review passes:
-At most three total review passes per milestone. Passes 2 and 3 occur only if
-Critical or Important findings remain. Never request or perform a fourth pass.
+At most six total review passes per milestone. Passes 2 and 3 occur only if
+Critical or Important findings remain. Passes 4-6 unlock only when Pass 3 is CONVERGING,
+and every later pass must also be CONVERGING. Never request or perform Pass 7
+or a replacement review.
 
 ## Read-Only Contract
 
@@ -51,7 +53,9 @@ For each pass the controller supplies:
 - implementer report path;
 - exact fixed BASE..HEAD range;
 - current pass number;
-- prior Critical/Important findings for passes 2 and 3.
+- prior Critical/Important findings with stable IDs for passes 2-6;
+- preceding-pass aggregate Critical/Important severity for passes 3-6;
+- prior convergence classifications for passes 4-6.
 
 Treat the implementer report as unverified claims. Inspect the exact diff and
 cite file:line evidence. Check both spec compliance and implementation quality.
@@ -75,13 +79,33 @@ name the focused command the controller or implementer should run.
 #### Important
 #### Minor
 
-For each finding: file:line, defect, impact, and correction.
+For each Critical or Important finding: stable ID, status (`new` on Pass 1;
+otherwise `resolved`, `downgraded`, `unchanged`, `reopened`, or `new` relative
+to the preceding pass), severity, file:line evidence, defect, impact, and
+correction. Preserve IDs across passes. Give later findings a new stable ID.
+
+Minor findings never drive another repair or re-review pass unless an
+acceptance criterion explicitly makes one blocking. Summarize and defer all
+other Minor findings.
 
 ### Assessment
 
 - Milestone quality: Approved | Needs fixes
-- Review pass: [1 | 2 | 3]
+- Review pass: [1 | 2 | 3 | 4 | 5 | 6]
 - Remaining Critical/Important count
+- Aggregate Critical/Important severity: Critical = 2 points, Important = 1
+  point, resolved or downgraded-to-Minor = 0 points
+- Convergence: NOT_APPLICABLE | CONVERGING | NOT_CONVERGING
+- Convergence evidence for Passes 3-6: blocking IDs resolved or downgraded;
+  reopened blocking IDs; new Critical IDs; preceding and current aggregate
+
+Use NOT_APPLICABLE for Passes 1-2. For Passes 3-6, report CONVERGING only when
+at least one blocking finding is resolved or downgraded, none is reopened, no
+new Critical finding appears, and aggregate severity decreases from the
+preceding pass. Otherwise report NOT_CONVERGING. The controller must stop on
+the first NOT_CONVERGING pass. After Pass 6, any remaining Critical or
+Important finding requires escalation; there is no automatic Pass 7 and no
+replacement reviewer.
 
 Return the complete review in this response when the pass is complete. Do not
 write review reports, notes, caches, or artifacts anywhere in the repository
