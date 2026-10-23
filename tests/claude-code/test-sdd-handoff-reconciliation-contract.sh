@@ -17,71 +17,81 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-SDD="$REPO_ROOT/skills/subagent-driven-development/SKILL.md"
-IMPLEMENTER="$REPO_ROOT/skills/subagent-driven-development/implementer-prompt.md"
-REVIEWER="$REPO_ROOT/skills/subagent-driven-development/milestone-reviewer-prompt.md"
+SDD="${SDD_CONTRACT_FILE:-$REPO_ROOT/skills/subagent-driven-development/SKILL.md}"
+IMPLEMENTER="${IMPLEMENTER_CONTRACT_FILE:-$REPO_ROOT/skills/subagent-driven-development/implementer-prompt.md}"
+REVIEWER="${REVIEWER_CONTRACT_FILE:-$REPO_ROOT/skills/subagent-driven-development/milestone-reviewer-prompt.md}"
 failures=0
 
-assert_has() {
+assert_section_has_all() {
     local file="$1"
-    local pattern="$2"
+    local heading="$2"
     local label="$3"
+    shift 3
+    local section
+    local pattern
+    local missing=()
 
-    if tr '\n' ' ' < "$file" | grep -Eiq "$pattern"; then
+    section="$(
+        awk -v heading="$heading" '
+            $0 == heading { in_section = 1; next }
+            in_section && /^#{1,6}[[:space:]]/ { exit }
+            in_section { print }
+        ' "$file"
+    )"
+
+    if [ -z "$section" ]; then
+        printf '  [FAIL] %s\n' "$label"
+        printf '         missing section %s in %s\n' \
+            "$heading" "${file#"$REPO_ROOT/"}"
+        failures=$((failures + 1))
+        return
+    fi
+
+    for pattern in "$@"; do
+        if ! grep -Eiq "$pattern" <<<"$section"; then
+            missing+=("$pattern")
+        fi
+    done
+
+    if [ "${#missing[@]}" -eq 0 ]; then
         printf '  [PASS] %s\n' "$label"
     else
         printf '  [FAIL] %s\n' "$label"
-        printf '         missing /%s/ in %s\n' "$pattern" "${file#"$REPO_ROOT/"}"
+        printf '         section %s in %s is missing:\n' \
+            "$heading" "${file#"$REPO_ROOT/"}"
+        printf '           /%s/\n' "${missing[@]}"
         failures=$((failures + 1))
     fi
 }
 
 echo "=== SDD handoff and admitted-message reconciliation contract ==="
 
-assert_has "$SDD" \
-    'refresh.*authoritative.*(live )?status.*before.*(working|waiting)' \
-    "parent refreshes authoritative status before working/waiting claims"
-assert_has "$SDD" \
-    'refresh.*authoritative.*(live )?status.*before.*(milestone|phase).*complet' \
-    "parent refreshes authoritative status before completion claims"
-assert_has "$SDD" \
-    'idle.*(expected )?handoff.*missing' \
-    "idle-without-handoff triggers reconciliation"
-assert_has "$SDD" \
-    '(missing handoff.*(latest )?(child|session).*state|(latest )?(child|session).*state.*missing handoff)' \
-    "missing-handoff recovery inspects latest session state"
-assert_has "$SDD" \
-    '(missing handoff.*(latest )?commit|(latest )?commit.*missing handoff)' \
-    "missing-handoff recovery inspects the latest commit"
-assert_has "$SDD" \
-    '(missing handoff.*(latest )?report|(latest )?report.*missing handoff)' \
-    "missing-handoff recovery inspects the latest report"
-assert_has "$SDD" \
-    'exactly one.*recovery handoff|recovery handoff.*exactly once' \
-    "parent requests exactly one recovery handoff"
-assert_has "$SDD" \
-    '(recovery.*fail|handoff.*still missing).*(stop|delivery failure)' \
-    "failed recovery stops with an explicit delivery failure"
-assert_has "$SDD" \
-    '(never|do not).*(wait indefinitely|keep waiting)' \
-    "parent never waits indefinitely for a missing handoff"
-assert_has "$SDD" \
-    'messages? admitted.*(current )?turn.*process.*compatible' \
-    "parent processes compatible messages admitted into the turn"
-assert_has "$SDD" \
-    'DISCARDED_AS_STALE.*reason.*(newer assignment|newer commit|closed phase)' \
-    "parent explicitly discards superseded admitted messages with a reason"
-assert_has "$SDD" \
-    '(cannot.*(inspect|see|read).*(host-private|private|transport).*(not-yet-delivered|undelivered).*queue|(host-private|private|transport).*(not-yet-delivered|undelivered).*queue.*cannot.*(inspect|see|read))' \
-    "skill does not claim visibility into an undelivered private queue"
+assert_section_has_all "$SDD" "## Live Status and Missing Handoff Reconciliation" \
+    "parent refreshes status and performs one bounded handoff recovery" \
+    'refresh' 'authoritative' '(live )?status' 'before' 'working' 'waiting' \
+    'milestone' 'phase' 'complet' 'idle' 'handoff' 'missing' \
+    '(latest )?(child|session).*state' '(latest )?commit' '(latest )?report' \
+    'exactly one' 'recovery handoff' 'delivery failure' 'stop' \
+    '(never|do not)' 'wait indefinitely'
+
+assert_section_has_all "$SDD" "## Admitted Message Reconciliation" \
+    "parent processes current admitted messages and discards stale ones" \
+    'process' 'compatible' 'message' 'admitted' 'current turn' \
+    'DISCARDED_AS_STALE' 'reason' 'newer assignment' 'newer commit' \
+    'closed phase'
+
+assert_section_has_all "$SDD" "## Private Queue Boundary" \
+    "skill disclaims visibility into an undelivered private queue" \
+    'cannot' '(inspect|see|read)' '(host-private|private|transport)' \
+    '(not-yet-delivered|undelivered)' 'queue'
 
 for prompt in "$IMPLEMENTER" "$REVIEWER"; do
-    assert_has "$prompt" \
-        'before.*(terminal|BLOCKED|MILESTONE_READY_FOR_REVIEW|complete review).*process.*message.*admitted.*turn' \
-        "$(basename "$prompt") processes admitted messages before terminal output"
-    assert_has "$prompt" \
-        'DISCARDED_AS_STALE.*reason.*(newer assignment|newer commit|closed phase)' \
-        "$(basename "$prompt") explicitly discards stale admitted messages"
+    assert_section_has_all "$prompt" "## Admitted Message Reconciliation" \
+        "$(basename "$prompt") reconciles admitted messages before terminal output" \
+        'before' '(terminal|BLOCKED|MILESTONE_READY_FOR_REVIEW|complete review)' \
+        'process' 'compatible' 'message' 'admitted' 'current turn' \
+        'DISCARDED_AS_STALE' 'reason' 'newer assignment' 'newer commit' \
+        'closed phase'
 done
 
 if [ "$failures" -gt 0 ]; then
