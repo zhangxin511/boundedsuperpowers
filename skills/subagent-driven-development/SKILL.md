@@ -120,6 +120,50 @@ platform cannot preserve two reusable child sessions, do not emulate the
 topology with fresh children; use `superpowers:executing-plans` in the current
 session or request a revised approval.
 
+## Live Status and Missing Handoff Reconciliation
+
+Before saying a child is working, still working, or that the controller is
+waiting for idle, refresh authoritative live status with the platform's
+session status or inspection tool. Refresh authoritative live status again
+before declaring a milestone or phase complete. A report, commit, lifecycle
+event, prior status read, or event ordering is not proof of current activity;
+never infer live status from cached state.
+
+If the child is idle and the expected handoff is missing:
+
+1. Inspect the latest child or session state, latest commit or `HEAD`, and the
+   expected latest report path.
+2. Request exactly one recovery handoff from that same child session. This is
+   a child activation and counts against the approved finite activation budget;
+   it does not authorize a replacement child or unlimited retries.
+3. If the handoff is recovered, continue from the reconciled state. If it is
+   still missing, report an explicit handoff delivery failure and stop.
+
+Never wait indefinitely for a lifecycle notification or missing handoff.
+Preserve the approved persistent pair, sequential activation, review-pass cap,
+and phase boundary throughout recovery.
+
+## Admitted Message Reconciliation
+
+Before the controller completes the current turn or task, completes a
+milestone, or completes the phase, process every cross-session message admitted
+into the current turn.
+
+- Process each message compatible with the current assignment, commit, and
+  phase.
+- If a message was superseded by a newer assignment, newer commit, or a
+  `closed phase`, explicitly record `DISCARDED_AS_STALE` and the reason. Never
+  silently ignore an admitted message.
+- Do not invent work outside the approved phase, and do not let a stale message
+  reopen completed work.
+
+## Private Queue Boundary
+
+This skill cannot inspect a host-private message that is not yet delivered into
+the current turn. "Check queued messages" means reconcile messages admitted
+into the current turn plus authoritative child or session state. Never claim
+that an undelivered private transport queue was enumerated or is empty.
+
 ## Milestone Loop
 
 ### 1. Dispatch the persistent implementer
@@ -149,6 +193,12 @@ The implementer uses TDD where required, validates, self-reviews, commits, and
 reports only when blocked or milestone-ready-for-review. Verbose implementation
 evidence belongs in the implementer's report file, not the chat response.
 
+Before reporting that the implementer is working, still working, or that the
+controller is waiting for idle, refresh authoritative live status. When the
+implementer is idle but the expected handoff is absent, follow **Live Status
+and Missing Handoff Reconciliation** instead of waiting for another lifecycle
+event.
+
 If blocked, resolve the blocker without creating another child. A material
 scope, model, provider, reasoning, context, or milestone change requires new
 approval.
@@ -177,6 +227,12 @@ The reviewer returns:
 
 Minor findings do not trigger another pass unless the acceptance criteria make
 them blocking.
+
+Before reporting that the reviewer is working, still working, or that the
+controller is waiting for idle, refresh authoritative live status. When the
+reviewer is idle but its complete review is absent, follow **Live Status and
+Missing Handoff Reconciliation**. Process every admitted cross-session message
+before acting on the review result.
 
 ### 3. Fix and re-review
 
@@ -212,6 +268,10 @@ A milestone is complete only when:
 - no Critical or Important findings remain;
 - its changes are committed.
 
+Before marking it complete, refresh authoritative live status and process every
+cross-session message admitted into the current turn. Apply compatible messages
+and explicitly record stale ones as `DISCARDED_AS_STALE` with the reason.
+
 Mark it complete and begin the next approved milestone with the same pair.
 Do not replace a child merely to obtain fresh context or a different verdict.
 
@@ -220,10 +280,15 @@ Do not replace a child merely to obtain fresh context or a different verdict.
 After the last approved milestone:
 
 1. Confirm every milestone commit and validation result.
-2. Summarize deferred Minor findings and any decisions.
-3. Retire both phase-scoped child identities.
-4. Report the phase as complete.
-5. Stop.
+2. Refresh authoritative live status for both children; do not infer it from
+   commits, reports, lifecycle events, or prior reads.
+3. Process every cross-session message admitted into the current turn. Apply
+   compatible messages; record superseded messages as `DISCARDED_AS_STALE`
+   with the reason.
+4. Summarize deferred Minor findings and any decisions.
+5. Retire both phase-scoped child identities.
+6. Report the phase as complete.
+7. Stop.
 
 Do not automatically run a final whole-branch review. Do not invoke
 `superpowers:finishing-a-development-branch` unless the human partner
@@ -258,6 +323,11 @@ not write review artifacts into the repository or worktree.
 - Continuing into the next phase after completion
 - Treating BLOCKED or initialization turns as free activations
 - Exceeding the disclosed activation budget without reapproval
+- Claiming a child is still working or waiting from a commit, report, lifecycle
+  event, event ordering, or cached status instead of refreshing live status
+- Waiting indefinitely for a lifecycle notification or missing handoff
+- Silently ignoring a cross-session message admitted into the current turn
+- Claiming to inspect or empty a host-private undelivered transport queue
 
 Any of these means stop and restore the approved bounded topology.
 
@@ -273,3 +343,7 @@ Any of these means stop and restore the approved bounded topology.
 | "The parent model is inherited automatically." | Automatic routing is not disclosed approval. Specify the exact model. |
 | "A final reviewer is extra assurance." | It is an extra agent and dispatch outside the approved topology. Obtain new approval first. |
 | "The plan has more tasks, so keep going." | Approval covers one phase only. Stop at its boundary. |
+| "The latest event says it is working." | Event ordering and cached state are not authoritative. Refresh live session status before the claim. |
+| "The handoff will arrive eventually." | Inspect state, commit, and report; request exactly one recovery handoff, then stop on delivery failure. |
+| "That message is old, so I can ignore it." | Every admitted message is processed or explicitly marked `DISCARDED_AS_STALE` with a reason. |
+| "I checked the queue and it was empty." | The skill cannot inspect an undelivered host-private queue; reconcile admitted messages and authoritative session state only. |

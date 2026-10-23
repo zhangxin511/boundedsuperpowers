@@ -59,6 +59,20 @@ Do not run tests or commands that may write caches, logs, build output, or any
 other file in the checkout or worktree. If a concrete doubt needs execution,
 name the focused command the controller or implementer should run.
 
+## Admitted Message Reconciliation
+
+Before returning the complete review or any other terminal output, process
+every compatible cross-session message admitted into the current turn.
+
+If an admitted message was superseded by a newer assignment, newer commit, or
+closed phase, explicitly record `DISCARDED_AS_STALE` and the reason. Never
+silently ignore it, invent work outside the approved phase, or let it reopen
+completed work.
+
+You cannot inspect a host-private message that is not yet delivered into the
+current turn. Do not claim that an undelivered private transport queue was
+enumerated or is empty.
+
 ## Output
 
 ### Spec Compliance

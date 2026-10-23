@@ -55,6 +55,21 @@ any other nested delegation. Do not create helper agents, reviewers, sessions,
 factories, or swarms. Complete the implementation work directly in this child
 session.
 
+## Admitted Message Reconciliation
+
+Before terminal output, including `BLOCKED`, `MILESTONE_READY_FOR_REVIEW`, or
+`PHASE_COMPLETE`, process every compatible cross-session message admitted into
+the current turn.
+
+If an admitted message was superseded by a newer assignment, newer commit, or
+closed phase, explicitly record `DISCARDED_AS_STALE` and the reason. Never
+silently ignore it, invent work outside the approved phase, or let it reopen
+completed work.
+
+You cannot inspect a host-private message that is not yet delivered into the
+current turn. Do not claim that an undelivered private transport queue was
+enumerated or is empty.
+
 ## Reporting
 
 Report only when:
