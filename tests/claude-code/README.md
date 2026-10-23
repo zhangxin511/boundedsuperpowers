@@ -86,6 +86,11 @@ echo "=== All tests passed ==="
 Statically verifies the bounded phase/pair contract across the core delegation
 skills, prompt templates, and user documentation.
 
+#### test-sdd-handoff-reconciliation-contract.sh
+Statically verifies the mechanical contract for authoritative status refresh,
+single-attempt missing-handoff recovery, admitted-message processing, explicit
+stale-message discard, and the private-queue visibility boundary.
+
 #### test-bounded-authoring-contract.sh
 Statically verifies approval disclosure, exact runtime settings, finite
 activation budgets, persistent skill-test and document-review roles,
