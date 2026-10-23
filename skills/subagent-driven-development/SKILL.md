@@ -49,7 +49,7 @@ Before creating either child, disclose one proposal containing:
 | Reviewer | Agent type, exact model/provider, reasoning effort, context tier |
 | Scope | Files/components each milestone may change |
 | Validation | Focused commands and milestone acceptance criteria |
-| Bounds | Two idle child creations, sequential activations, maximum `8 × milestones + 1` child activations for the phase, and three review passes per milestone |
+| Bounds | Two idle child creations; sequential activations; `8 × milestones + 1` primary child activations; a handoff-recovery reserve of at most `8 × milestones + 1`; absolute maximum `16 × milestones + 2`; and three review passes per milestone |
 | Stop boundary | Stop after this phase; no next phase, push, PR, merge, or deploy |
 
 Wait for exact approval of that proposal. Approval covers only the disclosed
@@ -95,8 +95,11 @@ Do not silently inherit or carry forward any runtime configuration from a prior 
    sending the reviewer prompt together with review pass 1. Never initialize
    both roles concurrently.
 
-For a phase with `M` milestones, the default disclosed maximum is `8 × M + 1`
-child activations:
+For a phase with `M` milestones, disclose all three finite limits:
+
+- normal work allowance: `8 × M + 1` primary child activations;
+- handoff-recovery reserve: at most `8 × M + 1` recovery activations;
+- absolute maximum: `16 × M + 2` total primary and recovery activations.
 
 - per milestone: one implementation activation, up to two blocker-resolution
   activations, up to two fix activations, and up to three review activations;
@@ -109,6 +112,16 @@ first implementer activation combines initialization with Milestone 1; the
 first reviewer activation combines initialization with review pass 1. If a
 platform requires separate initialization, those activations still count and
 reduce the remaining budget.
+
+One recovery may pair with the same primary activation's missing handoff.
+Pairing is allowed only after authoritative idle or terminal reconciliation.
+The handoff-recovery reserve cannot fund new implementation or review work. It
+cannot replace either child, cannot expand scope, cannot fund a second recovery
+for the same primary activation, and cannot transfer to ordinary work.
+
+Every recovery counts against both the handoff-recovery reserve and the
+absolute maximum. If no recovery reserve remains, stop and seek reapproval
+rather than violating the budget.
 
 Stop and seek reapproval before exceeding the disclosed activation budget.
 Repeated blockers do not create an unlimited exception: after two
@@ -134,12 +147,19 @@ If the child is idle and the expected handoff is missing:
 1. Inspect the latest child or session state, latest commit or `HEAD`, and the
    expected latest report path.
 2. Request exactly one recovery handoff from that same child session. This is
-   a child activation and counts against the approved finite activation budget;
-   it does not authorize a replacement child or unlimited retries.
-3. If the handoff is recovered, continue from the reconciled state. If it is
+   a recovery activation and counts against the handoff-recovery reserve and
+   absolute maximum; it does not authorize a replacement child or new work.
+3. Use the existing bounded condition or status mechanism and authoritative
+   status inspection until the exact recovery activation reaches terminal or
+   idle. Do not rely on a lifecycle notification, cached state, or immediate
+   absence in the current turn, and do not wait indefinitely.
+4. Once terminal or idle, reconcile exactly once: admitted messages plus the
+   latest session state, commit or `HEAD`, and report.
+5. If the handoff is recovered, continue from the reconciled state. If it is
    still missing, report an explicit handoff delivery failure and stop.
 
 Never wait indefinitely for a lifecycle notification or missing handoff.
+Never issue a second recovery for the same primary activation.
 Preserve the approved persistent pair, sequential activation, review-pass cap,
 and phase boundary throughout recovery.
 
@@ -323,6 +343,8 @@ not write review artifacts into the repository or worktree.
 - Continuing into the next phase after completion
 - Treating BLOCKED or initialization turns as free activations
 - Exceeding the disclosed activation budget without reapproval
+- Spending the handoff-recovery reserve on ordinary implementation or review
+- Requesting a second recovery for the same primary activation
 - Claiming a child is still working or waiting from a commit, report, lifecycle
   event, event ordering, or cached status instead of refreshing live status
 - Waiting indefinitely for a lifecycle notification or missing handoff
@@ -340,6 +362,10 @@ Any of these means stop and restore the approved bounded topology.
 | "A specialist fixer will converge faster." | A third editor breaks ownership and the approved topology; return findings to the same implementer. |
 | "One more review pass cannot hurt." | Three passes is the disclosed cap. Escalate after pass 3. |
 | "A blocked turn did no work, so it should not count." | Every activation consumes budget and can retain resources or trigger more work. |
+| "Recovery is just message delivery, so it does not count." | Every recovery consumes the dedicated reserve and absolute activation budget. |
+| "Unused recovery reserve can fund another fix." | The reserve is non-transferable and exists only for one missing handoff from an otherwise-approved primary activation. |
+| "The recovery message is not here yet, so delivery failed." | Refresh authoritative status until that exact recovery activation is terminal or idle, then reconcile once. |
+| "Try recovery one more time." | A primary activation gets at most one recovery. Stop and report delivery failure after terminal reconciliation. |
 | "The parent model is inherited automatically." | Automatic routing is not disclosed approval. Specify the exact model. |
 | "A final reviewer is extra assurance." | It is an extra agent and dispatch outside the approved topology. Obtain new approval first. |
 | "The plan has more tasks, so keep going." | Approval covers one phase only. Stop at its boundary. |

@@ -72,7 +72,25 @@ assert_section_has_all "$SDD" "## Live Status and Missing Handoff Reconciliation
     'milestone' 'phase' 'complet' 'idle' 'handoff' 'missing' \
     '(latest )?(child|session).*state' '(latest )?commit' '(latest )?report' \
     'exactly one' 'recovery handoff' 'delivery failure' 'stop' \
-    '(never|do not)' 'wait indefinitely'
+    '(never|do not)' 'wait indefinitely' \
+    'recovery activation.*(terminal|idle)' 'authoritative.*(status|inspection)' \
+    '(condition|status) mechanism' 'reconcile.*exactly once' \
+    'admitted messages' '(second|another) recovery'
+
+assert_section_has_all "$SDD" "## Phase Approval Gate" \
+    "phase proposal discloses primary, recovery-reserve, and absolute activation caps" \
+    '8 × milestones \+ 1' 'handoff-recovery reserve' \
+    '8 × milestones \+ 1' '16 × milestones \+ 2'
+
+assert_section_has_all "$SDD" "## Setup" \
+    "setup defines finite non-transferable recovery accounting" \
+    '8 × M \+ 1' 'primary child activations' \
+    'handoff-recovery reserve' '8 × M \+ 1' '16 × M \+ 2' \
+    'same.*activation.*missing handoff' 'cannot.*new.*(implementation|review)' \
+    'cannot.*replace' 'cannot.*expand scope' \
+    'cannot.*second recovery' 'cannot.*transfer' \
+    'every recovery.*counts' 'no recovery reserve remains' \
+    'stop.*reapproval'
 
 assert_section_has_all "$SDD" "## Admitted Message Reconciliation" \
     "parent processes current admitted messages and discards stale ones" \

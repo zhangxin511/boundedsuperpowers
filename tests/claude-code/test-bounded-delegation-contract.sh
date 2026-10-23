@@ -116,7 +116,13 @@ assert_has "$SDD" 'every child activation.*counts|every activation.*counts' \
 assert_has "$SDD" 'BLOCKED.*counts|blocked.*consumes' \
     "blocked turns consume the activation budget"
 assert_has "$SDD" '8 × M \+ 1' \
-    "phase activation budget has a finite formula"
+    "primary activation budget has a finite formula"
+assert_has "$SDD" 'handoff-recovery reserve.*8 × M \+ 1|8 × M \+ 1.*handoff-recovery reserve' \
+    "handoff recovery has a finite reserve"
+assert_has "$SDD" '16 × M \+ 2' \
+    "phase activation budget has an absolute maximum"
+assert_has "$SDD" 'cannot fund new.*implementation or review|cannot.*transfer to ordinary work' \
+    "recovery reserve cannot fund ordinary work"
 assert_has "$SDD" 'up to two blocker-resolution' \
     "blocker allowance is finite"
 assert_has "$SDD" 'stop.*reapproval.*exceed|before exceeding.*reapproval' \
@@ -162,8 +168,8 @@ assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integr
     'medium reasoning, default context' \
     "integration fixture names approved effort and context"
 assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integration.sh" \
-    'maximum 17 child activations' \
-    "integration fixture states the finite phase budget"
+    '17 primary child activations.*17 handoff-recovery.*absolute maximum 34' \
+    "integration fixture states primary, recovery, and absolute budgets"
 assert_lacks "$REPO_ROOT/tests/claude-code/README.md" \
     'persistent implementer and reviewer are reused|Delegated work is sequential|Reviewer stays read-only|Findings return to the same implementer|stops at the approved phase boundary' \
     "test documentation does not overclaim unasserted runtime properties"
