@@ -188,13 +188,27 @@ assert_has "$SDD" 'every child activation.*counts|every activation.*counts' \
 assert_has "$SDD" 'BLOCKED.*counts|blocked.*consumes' \
     "blocked turns consume the activation budget"
 assert_has "$SDD" 'base allowance.*8 × M \+ 1|8 × M \+ 1.*base allowance' \
-    "phase activation budget has a finite base formula"
-assert_has "$SDD" 'conditional reserve.*6 × M|6 × M.*conditional reserve' \
-    "phase activation budget has a finite conditional reserve"
-assert_has "$SDD" 'When Pass 3 is CONVERGING, a conditional reserve' \
-    "conditional reserve unlocks only after pass 3 converges"
-assert_has "$SDD" 'absolute.*14 × M \+ 1|14 × M \+ 1.*absolute' \
-    "phase activation budget has an absolute maximum"
+    "primary activation budget has a finite base formula"
+assert_has "$SDD" 'conditional primary reserve.*6 × M|6 × M.*conditional primary reserve' \
+    "primary activation budget has a finite conditional reserve"
+assert_has "$SDD" 'When Pass 3 is CONVERGING, a conditional primary reserve' \
+    "conditional primary reserve unlocks only after pass 3 converges"
+assert_has "$SDD" 'maximum authorized primary activations.*14 × M \+ 1|14 × M \+ 1.*maximum authorized primary activations' \
+    "primary activation budget has an absolute maximum"
+assert_has "$SDD" 'each.*authorized primary activation.*at most one recovery|at most one recovery.*authorized primary activation' \
+    "each authorized primary activation has at most one paired recovery"
+assert_has "$SDD" 'base.*8 × M \+ 1.*recover|8 × M \+ 1.*base.*recover' \
+    "base primary layer has the same finite recovery allowance"
+assert_has "$SDD" 'conditional.*6 × M.*recover.*unlock|6 × M.*conditional.*recover.*unlock' \
+    "conditional recoveries unlock with conditional primary activations"
+assert_has "$SDD" 'maximum recovery activations.*14 × M \+ 1|14 × M \+ 1.*maximum recovery activations' \
+    "recovery activation budget has an absolute maximum"
+assert_has "$SDD" '28 × M \+ 2' \
+    "primary plus recovery activations have an absolute maximum"
+assert_has "$SDD" 'cannot unlock Passes 4.?6|cannot fund.*Passes 4.?6' \
+    "recovery cannot unlock extended review passes"
+assert_has "$SDD" 'cannot.*ordinary work|cannot.*another primary activation' \
+    "recovery cannot fund ordinary or additional primary work"
 assert_has "$SDD" 'up to two blocker-resolution' \
     "blocker allowance is finite"
 assert_has "$SDD" 'stop.*reapproval.*exceed|before exceeding.*reapproval' \
@@ -240,8 +254,8 @@ assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integr
     'medium reasoning, default context' \
     "integration fixture names approved effort and context"
 assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integration.sh" \
-    'base allowance 17.*conditional reserve.*12.*absolute maximum 29' \
-    "integration fixture states the two-tier phase budget"
+    '17 base primary.*12 conditional primary.*29 primary maximum.*29 paired recoveries.*absolute maximum 58' \
+    "integration fixture states layered primary, paired recovery, and absolute budgets"
 assert_has "$REPO_ROOT/tests/claude-code/test-subagent-driven-development-integration.sh" \
     'at most six review passes' \
     "integration fixture states the convergence-gated pass cap"

@@ -55,7 +55,7 @@ Before creating either child, disclose one proposal containing:
 | Reviewer | Agent type, exact model/provider, reasoning effort, context tier |
 | Scope | Files/components each milestone may change |
 | Validation | Focused commands and milestone acceptance criteria |
-| Bounds | Two idle child creations, sequential activations, a base allowance of `8 × milestones + 1` child activations through Pass 3, a conditional reserve of at most `6 × milestones` after Pass 3 is CONVERGING, an absolute maximum of `14 × milestones + 1`, and at most six review passes per milestone |
+| Bounds | Two idle child creations; sequential activations; a base primary allowance of `8 × milestones + 1` through Pass 3; a conditional primary reserve of at most `6 × milestones` only while Pass 3 and later passes remain CONVERGING; maximum authorized primary activations of `14 × milestones + 1`; at most one paired recovery per actually authorized primary activation, with maximum recovery activations of `14 × milestones + 1`; an absolute primary-plus-recovery maximum of `28 × milestones + 2`; and at most six review passes per milestone |
 | Stop boundary | Stop after this phase; no next phase, push, PR, merge, or deploy |
 
 Wait for exact approval of that proposal. Approval covers only the disclosed
@@ -101,19 +101,20 @@ Do not silently inherit or carry forward any runtime configuration from a prior 
    sending the reviewer prompt together with review pass 1. Never initialize
    both roles concurrently.
 
-For a phase with `M` milestones, the base allowance is `8 × M + 1` child
-activations through Pass 3:
+For a phase with `M` milestones, the base allowance is `8 × M + 1` primary
+child activations through Pass 3:
 
 - per milestone: one implementation activation, up to two blocker-resolution
   activations, up to two fix activations, and up to three review activations;
 - per phase: one optional implementer phase-complete summary activation.
 
-When Pass 3 is CONVERGING, a conditional reserve of at most `6 × M`
+When Pass 3 is CONVERGING, a conditional primary reserve of at most `6 × M`
 activations unlocks for Passes 4-6. This reserve covers at most one fix and one
 review activation for each additional pass per milestone. It does not unlock
-for a milestone classified NOT_CONVERGING. The absolute disclosed maximum is `14 × M + 1`;
-unused reserve from one milestone does not authorize work outside
-the approved phase or beyond Pass 6.
+for a milestone classified NOT_CONVERGING, and every later pass must remain
+CONVERGING. The maximum authorized primary activations are `14 × M + 1`;
+unused reserve from one milestone does not authorize work outside the approved
+phase or beyond Pass 6.
 
 Every child activation or resume counts against this total, including first-use
 initialization, milestone work, a turn that returns BLOCKED, blocker resolution,
@@ -122,6 +123,25 @@ first implementer activation combines initialization with Milestone 1; the
 first reviewer activation combines initialization with review pass 1. If a
 platform requires separate initialization, those activations still count and
 reduce the remaining budget.
+
+Each actually authorized primary activation may have at most one recovery
+activation for its missing handoff. Pairing is allowed only after authoritative
+idle or terminal reconciliation.
+
+The base primary layer therefore has up to `8 × M + 1` paired recoveries. The
+conditional layer has up to `6 × M` additional recoveries, which unlock only
+when the corresponding convergence-gated primary activations unlock. Maximum recovery activations are `14 × M + 1`.
+The absolute primary-plus-recovery maximum is `28 × M + 2`.
+
+A recovery cannot unlock Passes 4-6.
+It cannot fund ordinary work or another primary activation.
+It cannot authorize a replacement child.
+It cannot expand scope.
+It cannot fund a second recovery for the same primary activation.
+Every recovery counts against both the paired recovery maximum and the absolute
+primary-plus-recovery maximum. If the primary activation has already used its
+paired recovery, or either maximum is exhausted, stop and seek reapproval
+rather than violating the budget.
 
 Stop and seek reapproval before exceeding the disclosed activation budget.
 Repeated blockers do not create an unlimited exception: after two
@@ -132,6 +152,58 @@ Use the platform's session-native messaging and resume mechanisms. If the
 platform cannot preserve two reusable child sessions, do not emulate the
 topology with fresh children; use `superpowers:executing-plans` in the current
 session or request a revised approval.
+
+## Live Status and Missing Handoff Reconciliation
+
+Before saying a child is working, still working, or that the controller is
+waiting for idle, refresh authoritative live status with the platform's
+session status or inspection tool. Refresh authoritative live status again
+before declaring a milestone or phase complete. A report, commit, lifecycle
+event, prior status read, or event ordering is not proof of current activity;
+never infer live status from cached state.
+
+If the child is idle and the expected handoff is missing:
+
+1. Inspect the latest child or session state, latest commit or `HEAD`, and the
+   expected latest report path.
+2. Request exactly one recovery handoff from that same child session. This is
+   the one recovery paired with the primary activation and counts against the
+   recovery and absolute primary-plus-recovery maxima; it does not authorize a
+   replacement child or new work.
+3. Use the existing bounded condition or status mechanism and authoritative
+   status inspection until the exact recovery activation reaches terminal or
+   idle. Do not rely on a lifecycle notification, cached state, or immediate
+   absence in the current turn, and do not wait indefinitely.
+4. Once terminal or idle, reconcile exactly once: admitted messages plus the
+   latest session state, commit or `HEAD`, and report.
+5. If the handoff is recovered, continue from the reconciled state. If it is
+   still missing, report an explicit handoff delivery failure and stop.
+
+Never wait indefinitely for a lifecycle notification or missing handoff.
+Never issue a second recovery for the same primary activation.
+Preserve the approved persistent pair, sequential activation, review-pass cap,
+and phase boundary throughout recovery.
+
+## Admitted Message Reconciliation
+
+Before the controller completes the current turn or task, completes a
+milestone, or completes the phase, process every cross-session message admitted
+into the current turn.
+
+- Process each message compatible with the current assignment, commit, and
+  phase.
+- If a message was superseded by a newer assignment, newer commit, or a
+  `closed phase`, explicitly record `DISCARDED_AS_STALE` and the reason. Never
+  silently ignore an admitted message.
+- Do not invent work outside the approved phase, and do not let a stale message
+  reopen completed work.
+
+## Private Queue Boundary
+
+This skill cannot inspect a host-private message that is not yet delivered into
+the current turn. "Check queued messages" means reconcile messages admitted
+into the current turn plus authoritative child or session state. Never claim
+that an undelivered private transport queue was enumerated or is empty.
 
 ## Milestone Loop
 
@@ -161,6 +233,12 @@ without repeating the role prompt.
 The implementer uses TDD where required, validates, self-reviews, commits, and
 reports only when blocked or milestone-ready-for-review. Verbose implementation
 evidence belongs in the implementer's report file, not the chat response.
+
+Before reporting that the implementer is working, still working, or that the
+controller is waiting for idle, refresh authoritative live status. When the
+implementer is idle but the expected handoff is absent, follow **Live Status
+and Missing Handoff Reconciliation** instead of waiting for another lifecycle
+event.
 
 If blocked, resolve the blocker without creating another child. A material
 scope, model, provider, reasoning, context, or milestone change requires new
@@ -194,6 +272,12 @@ The reviewer returns:
 Minor findings never drive another repair or re-review pass unless the
 acceptance criteria explicitly make one blocking. Summarize and defer all
 other Minor findings.
+
+Before reporting that the reviewer is working, still working, or that the
+controller is waiting for idle, refresh authoritative live status. When the
+reviewer is idle but its complete review is absent, follow **Live Status and
+Missing Handoff Reconciliation**. Process every admitted cross-session message
+before acting on the review result.
 
 ### 3. Fix and re-review
 
@@ -250,6 +334,10 @@ A milestone is complete only when:
 - no Critical or Important findings remain;
 - its changes are committed.
 
+Before marking it complete, refresh authoritative live status and process every
+cross-session message admitted into the current turn. Apply compatible messages
+and explicitly record stale ones as `DISCARDED_AS_STALE` with the reason.
+
 Mark it complete and begin the next approved milestone with the same pair.
 Do not replace a child merely to obtain fresh context or a different verdict.
 
@@ -258,10 +346,15 @@ Do not replace a child merely to obtain fresh context or a different verdict.
 After the last approved milestone:
 
 1. Confirm every milestone commit and validation result.
-2. Summarize deferred Minor findings and any decisions.
-3. Retire both phase-scoped child identities.
-4. Report the phase as complete.
-5. Stop.
+2. Refresh authoritative live status for both children; do not infer it from
+   commits, reports, lifecycle events, or prior reads.
+3. Process every cross-session message admitted into the current turn. Apply
+   compatible messages; record superseded messages as `DISCARDED_AS_STALE`
+   with the reason.
+4. Summarize deferred Minor findings and any decisions.
+5. Retire both phase-scoped child identities.
+6. Report the phase as complete.
+7. Stop.
 
 Do not automatically run a final whole-branch review. Do not invoke
 `superpowers:finishing-a-development-branch` unless the human partner
@@ -298,6 +391,13 @@ not write review artifacts into the repository or worktree.
 - Continuing into the next phase after completion
 - Treating BLOCKED or initialization turns as free activations
 - Exceeding the disclosed activation budget without reapproval
+- Spending a paired recovery on ordinary implementation or review
+- Requesting a second recovery for the same primary activation
+- Claiming a child is still working or waiting from a commit, report, lifecycle
+  event, event ordering, or cached status instead of refreshing live status
+- Waiting indefinitely for a lifecycle notification or missing handoff
+- Silently ignoring a cross-session message admitted into the current turn
+- Claiming to inspect or empty a host-private undelivered transport queue
 
 Any of these means stop and restore the approved bounded topology.
 
@@ -310,6 +410,14 @@ Any of these means stop and restore the approved bounded topology.
 | "A specialist fixer will converge faster." | A third editor breaks ownership and the approved topology; return findings to the same implementer. |
 | "One more review pass cannot hurt." | Passes 4-6 require measured convergence and the conditional reserve. Pass 7 is never automatic. |
 | "A blocked turn did no work, so it should not count." | Every activation consumes budget and can retain resources or trigger more work. |
+| "Recovery is just message delivery, so it does not count." | Every recovery consumes its primary activation's one paired recovery and the absolute activation budget. |
+| "An unused paired recovery can fund another fix." | A paired recovery is non-transferable and exists only for the missing handoff from its actually authorized primary activation. |
+| "The recovery message is not here yet, so delivery failed." | Refresh authoritative status until that exact recovery activation is terminal or idle, then reconcile once. |
+| "Try recovery one more time." | A primary activation gets at most one recovery. Stop and report delivery failure after terminal reconciliation. |
 | "The parent model is inherited automatically." | Automatic routing is not disclosed approval. Specify the exact model. |
 | "A final reviewer is extra assurance." | It is an extra agent and dispatch outside the approved topology. Obtain new approval first. |
 | "The plan has more tasks, so keep going." | Approval covers one phase only. Stop at its boundary. |
+| "The latest event says it is working." | Event ordering and cached state are not authoritative. Refresh live session status before the claim. |
+| "The handoff will arrive eventually." | Inspect state, commit, and report; request exactly one recovery handoff, then stop on delivery failure. |
+| "That message is old, so I can ignore it." | Every admitted message is processed or explicitly marked `DISCARDED_AS_STALE` with a reason. |
+| "I checked the queue and it was empty." | The skill cannot inspect an undelivered host-private queue; reconcile admitted messages and authoritative session state only. |
