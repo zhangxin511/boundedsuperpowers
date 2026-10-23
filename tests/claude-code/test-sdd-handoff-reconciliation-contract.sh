@@ -78,19 +78,26 @@ assert_section_has_all "$SDD" "## Live Status and Missing Handoff Reconciliation
     'admitted messages' '(second|another) recovery'
 
 assert_section_has_all "$SDD" "## Phase Approval Gate" \
-    "phase proposal discloses primary, recovery-reserve, and absolute activation caps" \
-    '8 × milestones \+ 1' 'handoff-recovery reserve' \
-    '8 × milestones \+ 1' '16 × milestones \+ 2'
+    "phase proposal discloses layered primary, paired-recovery, and absolute caps" \
+    'base.*8 × milestones \+ 1' 'conditional.*6 × milestones' \
+    'primary.*14 × milestones \+ 1' \
+    'recover.*14 × milestones \+ 1' '28 × milestones \+ 2' \
+    'at most six review passes'
 
 assert_section_has_all "$SDD" "## Setup" \
-    "setup defines finite non-transferable recovery accounting" \
-    '8 × M \+ 1' 'primary child activations' \
-    'handoff-recovery reserve' '8 × M \+ 1' '16 × M \+ 2' \
-    'same.*activation.*missing handoff' 'cannot.*new.*(implementation|review)' \
-    'cannot.*replace' 'cannot.*expand scope' \
-    'cannot.*second recovery' 'cannot.*transfer' \
-    'every recovery.*counts' 'no recovery reserve remains' \
-    'stop.*reapproval'
+    "setup pairs one recovery with each authorized primary activation" \
+    'base.*8 × M \+ 1.*primary' \
+    'Pass 3.*CONVERGING.*conditional.*6 × M|conditional.*6 × M.*Pass 3.*CONVERGING' \
+    'maximum.*primary.*14 × M \+ 1|14 × M \+ 1.*maximum.*primary' \
+    'each.*authorized primary activation.*at most one recovery' \
+    'base.*8 × M \+ 1.*recover' \
+    'conditional.*6 × M.*recover.*unlock' \
+    'maximum.*recover.*14 × M \+ 1|14 × M \+ 1.*maximum.*recover' \
+    '28 × M \+ 2' \
+    'cannot.*Passes 4.?6' 'cannot.*ordinary work' \
+    'cannot.*another primary activation' 'cannot.*replacement child' \
+    'cannot.*expand scope' 'cannot.*second recovery' \
+    'every recovery.*counts' 'stop.*reapproval'
 
 assert_section_has_all "$SDD" "## Admitted Message Reconciliation" \
     "parent processes current admitted messages and discards stale ones" \

@@ -113,7 +113,7 @@ echo ""
 # Test 6: Verify bounded review loops
 echo "Test 6: Bounded review loop requirements..."
 
-output=$(run_claude "In subagent-driven-development, what happens if a reviewer finds Critical or Important issues, and what is the review-pass cap?" "$CLAUDE_PROMPT_TIMEOUT")
+output=$(run_claude "In subagent-driven-development, what happens if a reviewer finds Critical or Important issues, when may passes 4-6 occur, and what is the review-pass cap?" "$CLAUDE_PROMPT_TIMEOUT")
 
 if assert_contains "$output" "loop\|again\|repeat\|until.*approved\|until.*compliant" "Review loops mentioned"; then
     : # pass
@@ -127,7 +127,13 @@ else
     exit 1
 fi
 
-if assert_contains "$output" "three\|3" "Review is capped at three passes"; then
+if assert_contains "$output" "CONVERGING\|converg" "Extended passes require convergence"; then
+    : # pass
+else
+    exit 1
+fi
+
+if assert_contains "$output" "six\|6" "Review is capped at six passes"; then
     : # pass
 else
     exit 1

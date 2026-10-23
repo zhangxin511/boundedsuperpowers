@@ -110,7 +110,7 @@ Tests skill content and requirements (~2 minutes):
 - Self-review requirements documented
 - Bounded phase size documented
 - Spec compliance reviewer skepticism documented
-- Three-pass review cap documented
+- Six-pass cap with Passes 4-6 gated on continued convergence documented
 - Nested delegation prohibition documented
 - Phase stop boundary documented
 
