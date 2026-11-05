@@ -79,6 +79,14 @@ enumerated or is empty.
 
 ## Output
 
+Before `task_complete` and before terminal output, use `send_session_message`
+with `purpose="handoff"` to send the coordinating parent the complete review
+as this activation's terminal payload. `task_complete` is not a substitute for
+this explicit handoff.
+
+Fail closed and stop if the explicit handoff cannot be accepted. Report the
+handoff failure in this session rather than claiming the review completed.
+
 ### Spec Compliance
 
 - Approved, or missing/extra/misunderstood requirements with file:line evidence

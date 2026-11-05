@@ -72,6 +72,15 @@ enumerated or is empty.
 
 ## Reporting
 
+Before `task_complete` and before terminal output, use `send_session_message`
+with `purpose="handoff"` to send the coordinating parent the complete terminal
+payload for this activation. `task_complete` is not a substitute for this
+explicit handoff.
+
+Fail closed and stop if the explicit handoff cannot be accepted. Report the
+handoff failure in this session. Do not claim `MILESTONE_READY_FOR_REVIEW`,
+`PHASE_COMPLETE`, or successful terminal completion.
+
 Report only when:
 
 - BLOCKED: a decision or missing context prevents progress;
