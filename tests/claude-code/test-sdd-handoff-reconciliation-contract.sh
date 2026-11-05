@@ -20,6 +20,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SDD="${SDD_CONTRACT_FILE:-$REPO_ROOT/skills/subagent-driven-development/SKILL.md}"
 IMPLEMENTER="${IMPLEMENTER_CONTRACT_FILE:-$REPO_ROOT/skills/subagent-driven-development/implementer-prompt.md}"
 REVIEWER="${REVIEWER_CONTRACT_FILE:-$REPO_ROOT/skills/subagent-driven-development/milestone-reviewer-prompt.md}"
+RE_REVIEWER="${RE_REVIEWER_CONTRACT_FILE:-$REPO_ROOT/skills/subagent-driven-development/re-review-prompt.md}"
 failures=0
 
 assert_section_has_all() {
@@ -28,6 +29,7 @@ assert_section_has_all() {
     local label="$3"
     shift 3
     local section
+    local searchable
     local pattern
     local missing=()
 
@@ -47,8 +49,10 @@ assert_section_has_all() {
         return
     fi
 
+    searchable="${section//$'\n'/ }"
+
     for pattern in "$@"; do
-        if ! grep -Eiq "$pattern" <<<"$section"; then
+        if ! grep -Eiq "$pattern" <<<"$searchable"; then
             missing+=("$pattern")
         fi
     done
@@ -66,6 +70,13 @@ assert_section_has_all() {
 
 echo "=== SDD handoff and admitted-message reconciliation contract ==="
 
+assert_section_has_all "$SDD" "## Setup" \
+    "Copilot App persistent children keep coordination and every-idle wake-ups enabled" \
+    'GitHub Copilot App' 'coordinate_with_creator.*true' \
+    'notify_on_idle.*always' '(both|each).*persistent (child|session)' \
+    'explicit handoff.*result' '(always-idle|idle notification).*wake-up fallback' \
+    '(neither|do not).*replace'
+
 assert_section_has_all "$SDD" "## Live Status and Missing Handoff Reconciliation" \
     "parent refreshes status and performs one bounded handoff recovery" \
     'refresh' 'authoritative' '(live )?status' 'before' 'working' 'waiting' \
@@ -75,7 +86,12 @@ assert_section_has_all "$SDD" "## Live Status and Missing Handoff Reconciliation
     '(never|do not)' 'wait indefinitely' \
     'recovery activation.*(terminal|idle)' 'authoritative.*(status|inspection)' \
     '(condition|status) mechanism' 'reconcile.*exactly once' \
-    'admitted messages' '(second|another) recovery'
+    'admitted messages' '(second|another) recovery' \
+    'handoff.*admitted.*sender.*busy' 'bounded' 'authoritative' \
+    '(status|condition).*checks' '(handoff|result).*idle notification' \
+    '(deduplicat|exactly once)' \
+    '(must not|never|do not).*end.*turn.*(automatic|automatically).*continu' \
+    '(real|actual).*(notification|scheduled wake-up|wake source)'
 
 assert_section_has_all "$SDD" "## Phase Approval Gate" \
     "phase proposal discloses layered primary, paired-recovery, and absolute caps" \
@@ -118,6 +134,27 @@ for prompt in "$IMPLEMENTER" "$REVIEWER"; do
         'DISCARDED_AS_STALE' 'reason' 'newer assignment' 'newer commit' \
         'closed phase'
 done
+
+assert_section_has_all "$IMPLEMENTER" "## Reporting" \
+    "implementer explicitly hands off its terminal payload before completing" \
+    'send_session_message' 'purpose.*handoff' 'coordinating parent' \
+    'terminal payload' 'before.*task_complete' 'before.*terminal output' \
+    'task_complete.*not.*substitute' \
+    '(fail closed|stop).*handoff.*(cannot|not).*accept'
+
+assert_section_has_all "$REVIEWER" "## Output" \
+    "reviewer explicitly hands off its terminal payload before completing" \
+    'send_session_message' 'purpose.*handoff' 'coordinating parent' \
+    'complete review' 'before.*task_complete' 'before.*terminal output' \
+    'task_complete.*not.*substitute' \
+    '(fail closed|stop).*handoff.*(cannot|not).*accept'
+
+assert_section_has_all "$RE_REVIEWER" "## Handoff Reporting" \
+    "re-reviewer explicitly hands off its terminal payload before completing" \
+    'send_session_message' 'purpose.*handoff' 'coordinating parent' \
+    'complete review' 'before.*task_complete' 'before.*terminal output' \
+    'task_complete.*not.*substitute' \
+    '(fail closed|stop).*handoff.*(cannot|not).*accept'
 
 if [ "$failures" -gt 0 ]; then
     printf '=== Contract failed: %d missing rule(s) ===\n' "$failures"

@@ -94,6 +94,10 @@ Do not silently inherit or carry forward any runtime configuration from a prior 
 5. Create a todo per milestone and record the phase approval.
 6. Create both child sessions idle, with no kickoff prompt or auto-start:
    one implementer and one reviewer. Idle creation does not activate a child.
+   In the GitHub Copilot App, create each persistent child with
+   `coordinate_with_creator=true` and `notify_on_idle="always"`.
+   The explicit handoff carries the result; the always-idle notification is
+   the wake-up fallback. Neither mechanism replaces the other.
 7. Record both child session IDs. Reuse these exact sessions for the whole
    phase.
 8. Initialize one role at a time on first use. Send the implementer prompt
@@ -178,6 +182,20 @@ If the child is idle and the expected handoff is missing:
    latest session state, commit or `HEAD`, and report.
 5. If the handoff is recovered, continue from the reconciled state. If it is
    still missing, report an explicit handoff delivery failure and stop.
+
+If a valid handoff is admitted while its sender is still busy, treat the
+handoff as the result and the later idle notification as its wake-up fallback,
+not as two completions. Use bounded authoritative status or condition checks
+until that exact activation is terminal or idle, then reconcile the assignment,
+commit, report, and all compatible admitted messages exactly once. Deduplicate
+a later idle notification or duplicate handoff by assignment, activation, and
+commit or review pass; it must not dispatch duplicate work.
+
+Never end the current turn with a promise that processing will automatically
+continue unless a real notification, scheduled wake-up, or other actual wake
+source exists. One busy status read is not such a wake source. Continue the
+bounded authoritative condition check in the current turn, or stop with an
+explicit failure if the platform cannot provide that check.
 
 Never wait indefinitely for a lifecycle notification or missing handoff.
 Never issue a second recovery for the same primary activation.
@@ -395,6 +413,10 @@ not write review artifacts into the repository or worktree.
 - Requesting a second recovery for the same primary activation
 - Claiming a child is still working or waiting from a commit, report, lifecycle
   event, event ordering, or cached status instead of refreshing live status
+- Ending a turn with a promise of automatic continuation when no real
+  notification, scheduled wake-up, or other wake source exists
+- Treating a handoff and its later idle notification as separate completions or
+  dispatching duplicate work
 - Waiting indefinitely for a lifecycle notification or missing handoff
 - Silently ignoring a cross-session message admitted into the current turn
 - Claiming to inspect or empty a host-private undelivered transport queue

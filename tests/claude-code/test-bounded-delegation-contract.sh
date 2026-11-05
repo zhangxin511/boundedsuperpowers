@@ -175,6 +175,10 @@ assert_lacks "$SDD" 'review artifacts in files|review report path' \
     "controller does not route reviewer output through checkout files"
 assert_has "$SDD" 'create both.*idle|already-created idle' \
     "children are created idle"
+assert_has "$SDD" 'coordinate_with_creator.*true' \
+    "Copilot App children coordinate with the parent"
+assert_has "$SDD" 'notify_on_idle.*always' \
+    "Copilot App children notify the parent on every idle transition"
 assert_has "$SDD" 'wait until the implementer is idle' \
     "implementer reaches idle before reviewer initialization"
 assert_has "$SDD" 'sending the reviewer prompt together with review pass 1' \
@@ -183,6 +187,12 @@ assert_has "$IMPLEMENTER" 'already-created idle child' \
     "implementer prompt is not an auto-start kickoff"
 assert_has "$REVIEWER" 'already-created idle child' \
     "reviewer prompt is not an auto-start kickoff"
+for prompt in "$IMPLEMENTER" "$REVIEWER" "$RE_REVIEWER"; do
+    assert_has "$prompt" 'purpose.*handoff' \
+        "$(basename "$prompt") requires an explicit handoff"
+    assert_has "$prompt" 'task_complete.*not.*substitute' \
+        "$(basename "$prompt") does not substitute terminal completion for handoff"
+done
 assert_has "$SDD" 'every child activation.*counts|every activation.*counts' \
     "every child activation consumes the budget"
 assert_has "$SDD" 'BLOCKED.*counts|blocked.*consumes' \
